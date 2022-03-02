@@ -103,16 +103,18 @@ contract CarRental {
     }
 
 
-    function customerRentCar(string calldata carName, uint rentMonth, uint totalDeposit) payable public returns (customerRentCarRecord memory) {
+
+
+    function customerRentCar(string calldata carName, uint rentMonth) payable public returns (customerRentCarRecord memory) {
         require(allCustomerAddresses[msg.sender] == true, "Customer not registered! Please register first!");
         require(carAvailability[carName] > 0, "No this type's cars available now!");
-        require(totalDeposit >= (carInfo[carName].price + (rentMonth + 1) * carInfo[carName].monthlyRent), "Deposit is not enough! Deposit shoule be larger than price + (x + 1) * monthlyRent");
+        require(msg.value >= (carInfo[carName].price + (rentMonth + 1) * carInfo[carName].monthlyRent), "Deposit is not enough! Deposit shoule be larger than price + (x + 1) * monthlyRent");
 
         customerRentingCarNumber[msg.sender][carName] += 1;
         carAvailability[carName] -= 1;
         customerRentCarRecord memory thisRentCarRecord = customerRentCarRecord(currentRentRecordId, msg.sender, carName, rentMonth, totalDeposit, block.timestamp, -1);
         allCustomerRentCarRecord[currentRentRecordId] = thisRentCarRecord;
-        payable(ABCAddress).transfer(totalDeposit);
+        payable(ABCAddress).transfer(msg.value);
         return thisRentCarRecord;
     }
     
