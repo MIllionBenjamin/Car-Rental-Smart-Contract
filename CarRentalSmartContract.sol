@@ -39,6 +39,7 @@ contract CarRental {
     struct ABCAuditDepositRecord {
         uint auditRecordId;
         uint returnRecordId;
+        address customerAddress;
         uint damageFixFee;
         uint actualRefundAmount;
 
@@ -197,16 +198,36 @@ contract CarRental {
 
     /*
     ABC company calls this function.
-     According to given returnRecordId, ABC companys checks the final fees and gives back the remained deposit to customer. 
+     According to given returnRecordId, ABC companys checks the rentFee + damageFee and gives back the remained deposit to customer. 
      */
     function ABCAuditDeposit(uint returnRecordId, uint damageFixFeeHere) payable public returns (ABCAuditDepositRecord memory) {
         require(returnRecordId <= currentReturnRecordId && returnRecordId > 0, "Input returnRecordId Invaid!");
         require(msg.sender == ABCAddress, "Only ABC company can audit the deposit!");
         require(allCustomerReturnCarRecord[returnRecordId].auditRecordId == -1, "The return of this returnId has been already audited!");
 
-        // Retrieve some values.
 
+        // Retrieve some values from rent&return record
+        address customerAddressHere = allCustomerReturnCarRecord[returnRecordId].customerAddress;
+        uint totalDepositHere = allCustomerRentCarRecord[allCustomerReturnCarRecord[returnRecordId].rentRecordId].totalMoneyDeposit;
+        uint rentFeeHere = allCustomerReturnCarRecord[returnRecordId].rentFee;
+
+        // Compute Remained Deposit that will be refunded to customer
+        uint refundAmountHere = totalDepositHere - rentFeeHere - damageFixFeeHere;
+
+        // Refund to customer
+        payable(customerAddressHere).transfer(refundAmountHere);
+
+        ABCAuditDepositRecord memory auditDepositRecordHere = ABCAuditDepositRecord(currentAuditRecordId, 
+                                                                                    returnRecordId,
+                                                                                    customerAddressHere, 
+                                                                                    damageFixFeeHere, 
+                                                                                    refundAmountHere);
+
+        allABCAuditDepositRecord[currentAuditRecordId] = auditDepositRecordHere;
+        allCustomerReturnCarRecord[returnRecordId].auditRecordId = int(currentAuditRecordId);
+        currentAuditRecordId += 1;
         
+        return auditDepositRecordHere;
     }
 
 }
