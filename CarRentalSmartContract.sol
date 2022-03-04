@@ -14,7 +14,7 @@ contract CarRental {
     }
 
     //will record the action involved with money
-    
+    // 
     struct customerRentCarRecord {
         uint rentRecordId;
         address customerAddress;
@@ -65,7 +65,8 @@ contract CarRental {
     mapping (string => uint) public carAvailability;
 
 
-    // All action history
+    // All action history. 
+    // Use allCustomerRentCarRecord[RentRecordId] to visit the record.
     uint public currentRentRecordId  = 1;
     mapping (uint => customerRentCarRecord) public allCustomerRentCarRecord;
 
@@ -77,17 +78,31 @@ contract CarRental {
 
 
 
-
+    /* 
+    ABC company calls this function.
+    ABC company deploys this contract.
+    */
     constructor() {
         ABCAddress = msg.sender;
     }
 
 
+    /* 
+    Customer calls this function.
+    Customer registers itself to this service. 
+    Store this customer's address in allCustomerAddresses.
+    */
     function customerRegister() public returns (bool) {
         allCustomerAddresses[msg.sender] = true;
         return true;
     }
 
+
+    /* 
+    ABC company calls this function.
+    Abc company add cars to this contract. 
+    Store car's info in carInfo. Update carAvailability.
+    */
     function ABCAddCar(string calldata carName, uint carPrice, uint carMonthlyRent, uint number) public returns (bool) {
         require(msg.sender == ABCAddress, "Only ABC can add cars!");
 
@@ -104,21 +119,94 @@ contract CarRental {
 
 
 
-
+    /*
+    Customer calls this function.
+    Customer rent ONE car.
+    Specify the carName and the rentMonth.
+    */
     function customerRentCar(string calldata carName, uint rentMonth) payable public returns (customerRentCarRecord memory) {
         require(allCustomerAddresses[msg.sender] == true, "Customer not registered! Please register first!");
         require(carAvailability[carName] > 0, "No this type's cars available now!");
         require(msg.value >= (carInfo[carName].price + (rentMonth + 1) * carInfo[carName].monthlyRent), "Deposit is not enough! Deposit shoule be larger than price + (x + 1) * monthlyRent");
 
+        // update customer renting car info
         customerRentingCarNumber[msg.sender][carName] += 1;
+        // update car's availability info
         carAvailability[carName] -= 1;
-        customerRentCarRecord memory thisRentCarRecord = customerRentCarRecord(currentRentRecordId, msg.sender, carName, rentMonth, totalDeposit, block.timestamp, -1);
+        // generate a customerRentCarRecord and put the record into customerRentCarRecord
+        customerRentCarRecord memory thisRentCarRecord = customerRentCarRecord(currentRentRecordId, msg.sender, carName, rentMonth, msg.value, block.timestamp, -1);
         allCustomerRentCarRecord[currentRentRecordId] = thisRentCarRecord;
+        currentRentRecordId += 1;
+        // customer pay eth to the ABCAddress as Deposit
         payable(ABCAddress).transfer(msg.value);
+
         return thisRentCarRecord;
     }
     
 
+    /*
+    Customer calls this function.
+    According to given rentRecordId, customer returns the car to this specified rent record. 
+    */
+    function customerReturnCar(uint rentRecordId) public returns (customerReturnCarRecord memory) {
+        require(rentRecordId <= currentRentRecordId && rentRecordId > 0, "Input rentRecordId Invaid!");
+        require(msg.sender == allCustomerRentCarRecord[rentRecordId].customerAddress, "The customer's address doesn't matched!");
+        require(allCustomerRentCarRecord[rentRecordId].returnRecordId == -1, "The rent of this rentId has been already returned!");
+        
+        // Retrieve some values.
+        string memory carNameHere = allCustomerRentCarRecord[rentRecordId].carName;
+        uint rentTimeStampHere = allCustomerRentCarRecord[rentRecordId].rentTimeStamp;
+        
+        // update customer renting car info
+        customerRentingCarNumber[msg.sender][carNameHere] -= 1;
+        // update car's availability info
+        carAvailability[carNameHere] += 1;
 
+        // Use timestamp to compute the actual 
+        uint timeNow = block.timestamp;
+        uint actualTimePassed =  timeNow - rentTimeStampHere;
+        /* Calculate how many days passed. 
+            Tructate the decimal part
+            e.g. 1.2 day will be considered as 1 day */
+        uint actualDayPassed = actualTimePassed / 60 / 60 / 24;
+        /* Calculate how many months passed. 30 days = 1 month. 
+            Round up.
+            e.g. 2.5 month will be considered as 3 month */
+        uint actualMonthPassed = actualDayPassed / 30;
+        if (actualDayPassed % 30 > 0) {
+            actualMonthPassed += 1;
+        }
+
+        // Compute rent fee.
+        uint rentFeeHere = actualMonthPassed * carInfo[carNameHere].monthlyRent;
+        
+        // generate a customerReturnCarRecord and put the record into customerRentCarRecord
+        customerReturnCarRecord memory thisReturnCarRecord = customerReturnCarRecord(currentReturnRecordId, 
+                                                                                     rentRecordId, 
+                                                                                     msg.sender, 
+                                                                                     carNameHere, 
+                                                                                     timeNow, 
+                                                                                     rentFeeHere, 
+                                                                                     -1);
+        allCustomerReturnCarRecord[currentReturnRecordId] = thisReturnCarRecord;
+        allCustomerRentCarRecord[rentRecordId].returnRecordId = int(currentReturnRecordId);
+        currentReturnRecordId += 1;
+
+        return thisReturnCarRecord;
+    }
+
+    /*
+    ABC company calls this function.
+     According to given returnRecordId, ABC companys checks the final fees and gives back the remained deposit to customer. 
+     */
+    function ABCAuditDeposit(uint returnRecordId, uint damageFixFeeHere) payable public returns (ABCAuditDepositRecord memory) {
+        require(returnRecordId <= currentReturnRecordId && returnRecordId > 0, "Input returnRecordId Invaid!");
+        require(msg.sender == ABCAddress, "Only ABC company can audit the deposit!");
+        require(allCustomerReturnCarRecord[returnRecordId].auditRecordId == -1, "The return of this returnId has been already audited!");
+
+        // Retrieve some values.
+
+        
+    }
 
 }
