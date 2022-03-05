@@ -5,12 +5,10 @@ contract CarRental {
 
     struct Car {
         string name;
-        /*
-        Car's price. 
-        When customer rent a car, the customer must deposit money: price + (x + 1) * monthlyRent.
-        */
-        uint price;
-        uint monthlyRent;
+        // Car's Deposit = 90 * dailyRent (3 month's rent)
+        uint needDeposit;
+        // The rent for renting the car one day.
+        uint dailyRent;
     }
 
     //will record the action involved with money
@@ -19,7 +17,7 @@ contract CarRental {
         uint rentRecordId;
         address customerAddress;
         string carName;
-        uint rentMonth;
+        uint rentDays;
         uint totalMoneyDeposit;
         uint rentTimeStamp;
         int returnRecordId;
@@ -45,7 +43,7 @@ contract CarRental {
 
     }
     
-    // company instace
+    // company address
     address public ABCAddress;
 
     // A mapping that stores all customers' addresses.
@@ -66,6 +64,7 @@ contract CarRental {
     mapping (string => uint) public carAvailability;
 
 
+
     // All action history. 
     // Use allCustomerRentCarRecord[RentRecordId] to visit the record.
     uint public currentRentRecordId  = 1;
@@ -78,6 +77,18 @@ contract CarRental {
     mapping (uint => ABCAuditDepositRecord) public allABCAuditDepositRecord;
 
 
+
+    // A modifier that uses for the function which can only be called by ABC.
+    modifier onlyABCCompanyCanCall {
+      require(msg.sender == ABCAddress, "Only ABC can call this function!");
+      _;
+   }
+
+    // A modifier that uses for the function which can only be called by Registered Customer.
+    modifier onlyRegisteredCustomerCanCall {
+       require(allCustomerAddresses[msg.sender] == true, "Customer not registered! Please register first!");
+       _;
+   }
 
     /* 
     ABC company calls this function.
@@ -104,13 +115,13 @@ contract CarRental {
     Abc company add cars to this contract. 
     Store car's info in carInfo. Update carAvailability.
     */
-    function ABCAddCar(string calldata carName, uint carPrice, uint carMonthlyRent, uint number) public returns (bool) {
-        require(msg.sender == ABCAddress, "Only ABC can add cars!");
+    function ABCAddCar(string calldata carName, uint carDailyRent, uint number) public onlyABCCompanyCanCall returns (bool) {
+        //require(msg.sender == ABCAddress, "Only ABC can add cars!");
 
         carInfo[carName] = Car({
             name: carName, 
-            price: carPrice,
-            monthlyRent: carMonthlyRent
+            needDeposit: carDailyRent * 90,
+            dailyRent: carDailyRent
         });
 
         carAvailability[carName] += number;
@@ -118,24 +129,22 @@ contract CarRental {
         return true;
     }
 
-
-
     /*
     Customer calls this function.
     Customer rent ONE car.
-    Specify the carName and the rentMonth.
+    Specify the carName and the rentDays.
     */
-    function customerRentCar(string calldata carName, uint rentMonth) payable public returns (customerRentCarRecord memory) {
-        require(allCustomerAddresses[msg.sender] == true, "Customer not registered! Please register first!");
+    function customerRentCar(string calldata carName, uint rentDays) payable public onlyRegisteredCustomerCanCall returns (customerRentCarRecord memory) {
+        //require(allCustomerAddresses[msg.sender] == true, "Customer not registered! Please register first!");
         require(carAvailability[carName] > 0, "No this type's cars available now!");
-        require(msg.value >= (carInfo[carName].price + (rentMonth + 1) * carInfo[carName].monthlyRent), "Deposit is not enough! Deposit shoule be larger than price + (x + 1) * monthlyRent");
+        require(msg.value >= (carInfo[carName].needDeposit + rentDays * carInfo[carName].dailyRent), "Deposit given here is not enough! Deposit shoule be larger than (90 + rentDays) * dailyRent");
 
         // update customer renting car info
         customerRentingCarNumber[msg.sender][carName] += 1;
         // update car's availability info
         carAvailability[carName] -= 1;
         // generate a customerRentCarRecord and put the record into customerRentCarRecord
-        customerRentCarRecord memory thisRentCarRecord = customerRentCarRecord(currentRentRecordId, msg.sender, carName, rentMonth, msg.value, block.timestamp, -1);
+        customerRentCarRecord memory thisRentCarRecord = customerRentCarRecord(currentRentRecordId, msg.sender, carName, rentDays, msg.value, block.timestamp, -1);
         allCustomerRentCarRecord[currentRentRecordId] = thisRentCarRecord;
         currentRentRecordId += 1;
         // customer pay eth to the ABCAddress as Deposit
@@ -149,7 +158,7 @@ contract CarRental {
     Customer calls this function.
     According to given rentRecordId, customer returns the car to this specified rent record. 
     */
-    function customerReturnCar(uint rentRecordId) public returns (customerReturnCarRecord memory) {
+    function customerReturnCar(uint rentRecordId) public onlyRegisteredCustomerCanCall returns (customerReturnCarRecord memory) {
         require(rentRecordId <= currentRentRecordId && rentRecordId > 0, "Input rentRecordId Invaid!");
         require(msg.sender == allCustomerRentCarRecord[rentRecordId].customerAddress, "The customer's address doesn't matched!");
         require(allCustomerRentCarRecord[rentRecordId].returnRecordId == -1, "The rent of this rentId has been already returned!");
@@ -167,19 +176,13 @@ contract CarRental {
         uint timeNow = block.timestamp;
         uint actualTimePassed =  timeNow - rentTimeStampHere;
         /* Calculate how many days passed. 
-            Tructate the decimal part
-            e.g. 1.2 day will be considered as 1 day */
-        uint actualDayPassed = actualTimePassed / 60 / 60 / 24;
-        /* Calculate how many months passed. 30 days = 1 month. 
-            Round up.
-            e.g. 2.5 month will be considered as 3 month */
-        uint actualMonthPassed = actualDayPassed / 30;
-        if (actualDayPassed % 30 > 0) {
-            actualMonthPassed += 1;
-        }
+            In Solidity,the decimal part will be tructated, so the actualDayPassed will be added 1 finally. 
+         */
+        uint actualDayPassed = actualTimePassed / 60 / 60 / 24 + 1;
+
 
         // Compute rent fee.
-        uint rentFeeHere = actualMonthPassed * carInfo[carNameHere].monthlyRent;
+        uint rentFeeHere = actualDayPassed * carInfo[carNameHere].dailyRent;
         
         // generate a customerReturnCarRecord and put the record into customerRentCarRecord
         customerReturnCarRecord memory thisReturnCarRecord = customerReturnCarRecord(currentReturnRecordId, 
@@ -200,9 +203,9 @@ contract CarRental {
     ABC company calls this function.
      According to given returnRecordId, ABC companys checks the rentFee + damageFee and gives back the remained deposit to customer. 
      */
-    function ABCAuditDeposit(uint returnRecordId, uint damageFixFeeHere) payable public returns (ABCAuditDepositRecord memory) {
+    function ABCAuditDeposit(uint returnRecordId, uint damageFixFeeHere) payable public onlyABCCompanyCanCall returns (ABCAuditDepositRecord memory) {
         require(returnRecordId <= currentReturnRecordId && returnRecordId > 0, "Input returnRecordId Invaid!");
-        require(msg.sender == ABCAddress, "Only ABC company can audit the deposit!");
+        //require(msg.sender == ABCAddress, "Only ABC company can audit the deposit!");
         require(allCustomerReturnCarRecord[returnRecordId].auditRecordId == -1, "The return of this returnId has been already audited!");
 
 

@@ -19,12 +19,7 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "carPrice",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "carMonthlyRent",
+						"name": "carDailyRent",
 						"type": "uint256"
 					},
 					{
@@ -61,6 +56,57 @@
 				"inputs": [
 					{
 						"internalType": "uint256",
+						"name": "returnRecordId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "damageFixFeeHere",
+						"type": "uint256"
+					}
+				],
+				"name": "ABCAuditDeposit",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "auditRecordId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "returnRecordId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address",
+								"name": "customerAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "damageFixFee",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "actualRefundAmount",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct CarRental.ABCAuditDepositRecord",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
 						"name": "",
 						"type": "uint256"
 					}
@@ -76,6 +122,11 @@
 						"internalType": "uint256",
 						"name": "returnRecordId",
 						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "customerAddress",
+						"type": "address"
 					},
 					{
 						"internalType": "uint256",
@@ -137,7 +188,7 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "rentMonth",
+						"name": "rentDays",
 						"type": "uint256"
 					},
 					{
@@ -244,12 +295,12 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "price",
+						"name": "needDeposit",
 						"type": "uint256"
 					},
 					{
 						"internalType": "uint256",
-						"name": "monthlyRent",
+						"name": "dailyRent",
 						"type": "uint256"
 					}
 				],
@@ -317,12 +368,7 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "rentMonth",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "totalDeposit",
+						"name": "rentDays",
 						"type": "uint256"
 					}
 				],
@@ -347,7 +393,7 @@
 							},
 							{
 								"internalType": "uint256",
-								"name": "rentMonth",
+								"name": "rentDays",
 								"type": "uint256"
 							},
 							{
@@ -397,6 +443,62 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "rentRecordId",
+						"type": "uint256"
+					}
+				],
+				"name": "customerReturnCar",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "returnRecordId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rentRecordId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address",
+								"name": "customerAddress",
+								"type": "address"
+							},
+							{
+								"internalType": "string",
+								"name": "carName",
+								"type": "string"
+							},
+							{
+								"internalType": "uint256",
+								"name": "returnTimeStamp",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rentFee",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "auditRecordId",
+								"type": "int256"
+							}
+						],
+						"internalType": "struct CarRental.customerReturnCarRecord",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -427,10 +529,10 @@
 	},
 	"sources": {
 		"CarRentalSmartContract.sol": {
-			"keccak256": "0x748f7e605c20c12bc77695c484caa875d01ad67fc518a49dd235b3f371c4b1ac",
+			"keccak256": "0x7d6dff9a2e7cb0e7a04bceeab1dc14b4d1a37b0a4d0009f8a2935b33b80649eb",
 			"urls": [
-				"bzz-raw://c0804a80c8881edf47fb3ab77c7e456ef27bb39226be0d5234a56066c9ba2d72",
-				"dweb:/ipfs/QmQygb6K8JKsEKRUqArVU36hkmhQ2Wu6LQuU8YwHpByk3y"
+				"bzz-raw://a263ffde15354ac19ce7bf0de58948e0986a1eb0eef57b0df8f0fb5128b758c0",
+				"dweb:/ipfs/Qmca2RzfEcDMjW5yU1rD894V6sny74PnMAkTveN96FqyLn"
 			]
 		}
 	},
